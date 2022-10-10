@@ -1,0 +1,19 @@
+{
+  "name": "com.ryuuk.webview",
+  "version": "0.1.0",
+  "displayName": "Web View",
+  "description": "This is a test package",
+  "unity": "2021.3",
+  "unityRelease": "8f1",
+  "dependencies": {},
+  "keywords": [
+    "Web",
+    "View",
+    "Test"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Robin",
+    "email": "unbalanced.freaks@gmail.com"
+  }
+}
