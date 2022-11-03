@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.ryuuk.testpackage": {
+      "version": "https://github.com/rYuuk/TestPackage.git#v0.2.0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "05b02f1e1416f0c484baf79d3e84e096bf9af136"
+    },
     "com.unity.collab-proxy": {
       "version": "1.17.2",
       "depth": 0,
