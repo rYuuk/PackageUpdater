@@ -25,10 +25,10 @@ public static class Updater
     {
         EditorApplication.update += Update;
     }
-    
+
     private static void Update()
     {
-        if (SessionState.GetBool(SESSION_STARTED_KEY,false)) return;
+        if (SessionState.GetBool(SESSION_STARTED_KEY, false)) return;
         SessionState.SetBool(SESSION_STARTED_KEY, true);
 
         if (SessionState.GetBool("inProgress", false))
@@ -58,16 +58,17 @@ public static class Updater
         // Remove .git from the url and /releases
         var pFrom = repoUrl.IndexOf("https://github.com", StringComparison.Ordinal) + "https://github.com".Length;
         var pTo = repoUrl.LastIndexOf(".git", StringComparison.Ordinal);
-
         var repoName = repoUrl.Substring(pFrom, pTo - pFrom);
+
+        // Create releases url by adding repoName to api.github url
         var releasesUrl = "https://api.github.com/repos" + repoName + "/releases";
 
         // remove #version from url
         var packageUrl = repoUrl.Substring(0, repoUrl.Length - 7);
-        CheckUpdate(package.name, packageUrl, releasesUrl, new Version(package.version));
+        FetchReleases(package.name, packageUrl, releasesUrl, new Version(package.version));
     }
 
-    private static async void CheckUpdate(string packageName, string packageUrl, string releasesUrl, Version currentVersion)
+    private static async void FetchReleases(string packageName, string packageUrl, string releasesUrl, Version currentVersion)
     {
         var request = UnityWebRequest.Get(releasesUrl);
         var async = request.SendWebRequest();
@@ -75,9 +76,9 @@ public static class Updater
         {
             await Task.Yield();
         }
-        
+
         var response = request.downloadHandler.text;
-        
+
         var resp = JsonConvert.DeserializeObject<Release[]>(response);
         var versions = new Version[resp!.Length];
 
@@ -90,14 +91,14 @@ public static class Updater
 
         if (latestVersion > currentVersion)
         {
-            await UpdatePackages(packageName, currentVersion, latestVersion, packageUrl);
+            PromptForUpdate(packageName, currentVersion, latestVersion, packageUrl);
         }
     }
 
-    private static async Task UpdatePackages(string packageName, Version currentVersion, Version latestVersion, string url)
+    private static void PromptForUpdate(string packageName, Version currentVersion, Version latestVersion, string packageUrl)
     {
-        url += "#v" + latestVersion;
-        int option = EditorUtility.DisplayDialogComplex("Update Packages",
+        packageUrl += "#v" + latestVersion;
+        var option = EditorUtility.DisplayDialogComplex("Update Packages",
             $"New update available for {packageName}\nCurrent version: {currentVersion}\nLatest version: {latestVersion}",
             "Update",
             "Cancel",
@@ -107,35 +108,39 @@ public static class Updater
         {
             // Update.
             case 0:
-                SessionState.SetBool("inProgress", true);
-                var removeRequest = Client.Remove(packageName);
-                while (!removeRequest.IsCompleted)
-                {
-                    await Task.Yield();
-                }
-
-                await Task.Yield();
-    
-                Debug.Log("[Updater] " + url);
-                
-                var addRequest = Client.Add(url);
-                while (!addRequest.IsCompleted)
-                {
-                    await Task.Yield();
-                }
-
-                Debug.Log($"Updated {packageName} from {currentVersion} to {latestVersion}");
-                EditorPrefs.SetBool("inProgress", false);
+                Update(packageName, packageUrl, currentVersion, latestVersion);
                 break;
-
             // Cancel.
             case 1:
+            // Don't Update
             case 2:
                 break;
-
             default:
                 Debug.LogError("Unrecognized option.");
                 break;
         }
+    }
+
+    private static async void Update(string packageName, string packageUrl, Version currentVersion, Version latestVersion)
+    {
+        SessionState.SetBool("inProgress", true);
+        var removeRequest = Client.Remove(packageName);
+        while (!removeRequest.IsCompleted)
+        {
+            await Task.Yield();
+        }
+
+        await Task.Yield();
+
+        Debug.Log("[Updater] " + packageUrl);
+
+        var addRequest = Client.Add(packageUrl);
+        while (!addRequest.IsCompleted)
+        {
+            await Task.Yield();
+        }
+
+        Debug.Log($"Updated {packageName} from {currentVersion} to {latestVersion}");
+        EditorPrefs.SetBool("inProgress", false);
     }
 }
