@@ -12,11 +12,10 @@ using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 public static class Updater
 {
     //    "com.ryuuk.testpackage" : "https://github.com/rYuuk/TestPackage.git#v0.2.0",
-    [Serializable]
     public class Release
     {
-        public string tag_name;
-        public string name;
+        [JsonProperty("tag_name")]
+        public string Tag;
     }
 
     private const string SESSION_STARTED_KEY = "SessionStarted";
@@ -31,10 +30,6 @@ public static class Updater
         if (SessionState.GetBool(SESSION_STARTED_KEY, false)) return;
         SessionState.SetBool(SESSION_STARTED_KEY, true);
 
-        if (SessionState.GetBool("inProgress", false))
-        {
-            return;
-        }
         GetCurrentRelease();
     }
 
@@ -42,7 +37,7 @@ public static class Updater
     {
         var packages = AssetDatabase.FindAssets("package") // Get all packages files
             .Select(AssetDatabase.GUIDToAssetPath) // Get path
-            .Where(x => x.Contains(".json") && x.Contains("com.ryuuk")) // Get package.json and com.ryuuk packages
+            .Where(x => x.Contains("package.json") && x.Contains("com.ryuuk")) // Get package.json and com.ryuuk packages
             .Select(PackageInfo.FindForAssetPath).ToList();
 
         if (packages.Count == 0)
@@ -84,7 +79,7 @@ public static class Updater
 
         for (int i = 0; i < resp.Length; i++)
         {
-            versions[i] = new Version(resp[i].tag_name.Substring(1));
+            versions[i] = new Version(resp[i].Tag.Substring(1));
         }
 
         var latestVersion = versions.Max();
@@ -123,7 +118,6 @@ public static class Updater
 
     private static async void Update(string packageName, string packageUrl, Version currentVersion, Version latestVersion)
     {
-        SessionState.SetBool("inProgress", true);
         var removeRequest = Client.Remove(packageName);
         while (!removeRequest.IsCompleted)
         {
